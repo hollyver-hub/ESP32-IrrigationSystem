@@ -54,14 +54,12 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // O seu construtor de abas funciona perfeitamente aqui!
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _abaSelecionada == index;
     
     return GestureDetector(
       onTap: () {
         setState(() {
-          // Agora, ao mudar o índice, o IndexedStack no body troca a tela exibida!
           _abaSelecionada = index;
         });
       },

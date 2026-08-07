@@ -35,7 +35,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Fundo cinza claro
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       
       appBar: AppBar(
         backgroundColor: Theme.of(context).cardColor,
@@ -61,7 +61,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                   ),
                 ),
                 Text(
-                  'Sensor ${(widget.nomeAtual.split(' ').last)}', // Dinâmico (ex: Sensor X)
+                  'Sensor ${(widget.nomeAtual.split(' ').last)}', 
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyMedium?.color,
                     fontSize: 12,
@@ -74,7 +74,6 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
         ],
       ),
 
-      // --- CORPO DA TELA ---
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -83,11 +82,9 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
             children: [
               const SizedBox(height: 16),
 
-              // --- ÁREA DA FOTO (PLACEHOLDER) ---
               Center(
                 child: GestureDetector(
                   onTap: () {
-                    // Lógica futura para abrir galeria ou câmera
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Abrir galeria de fotos...')),
                     );
@@ -103,13 +100,11 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Ícone grande de câmera
                         Icon(
                           Icons.camera_alt_outlined,
                           size: 70,
                           color: Colors.black.withOpacity(0.8),
                         ),
-                        // Ícone pequeno de edição no canto superior direito
                         Positioned(
                           top: 12,
                           right: 12,
@@ -127,7 +122,6 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
 
               const SizedBox(height: 48),
 
-              // --- CAMPO NOME ---
               Text(
                 'Nome',
                 style: TextStyle(
@@ -219,17 +213,16 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
 
               const SizedBox(height: 150),
 
-              // --- BOTÃO SALVAR ---
               Align(
                 alignment: Alignment.bottomRight,
                 child: ElevatedButton(
                   onPressed: () {
                     // Aqui você integrará futuramente o envio do novo limite
                     // para o ESP32 via HTTP/MQTT e a atualização do estado global.
-                    Navigator.pop(context); // Retorna à tela anterior
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF333333), // Tom escuro do mockup
+                    backgroundColor: const Color(0xFF333333), 
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
-import 'plant_config.dart'; // Importa a tela de configuração da planta
+import 'plant_config.dart';
 
 class MonitorScreen extends StatefulWidget {
   const MonitorScreen({super.key});
@@ -34,19 +34,19 @@ class _MonitorScreenState extends State<MonitorScreen> {
   Color _getCorStatusSistema(String status) {
     if (status == 'Offline') return globals.red_graphic;
     if (status == 'Suspenso') return globals.yellow_graphic;
-    return globals.green_primary; // Padrão para 'Ativo'
+    return globals.green_primary; 
   }
 
   Color _getCorBateria(int nivel) {
     if (nivel < 20) return globals.red_graphic;
     if (nivel < 50) return globals.yellow_graphic;
-    return globals.green_primary; // Padrão para >= 50%
+    return globals.green_primary;
   }
 
   Color _getCorPlacaSolar(String status) {
     if (status == 'N/A') return globals.red_graphic;
     if (status == 'Inativo') return globals.yellow_graphic;
-    return globals.green_primary; // Padrão para 'Carregando'
+    return globals.green_primary;
   }
 
   @override
@@ -98,7 +98,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       child: _buildTelemetryColumn(
                         value: statusSistema,
                         label: 'Status do\nSistema',
-                        // Chama a função passando a string atual
                         valueColor: _getCorStatusSistema(statusSistema), 
                       ),
                     ),
@@ -109,7 +108,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       child: _buildTelemetryColumn(
                         value: '$nivelBateria%',
                         label: 'Nível da\nBateria',
-                        // Chama a função passando o inteiro atual
                         valueColor: _getCorBateria(nivelBateria),
                       ),
                     ),
@@ -120,7 +118,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       child: _buildTelemetryColumn(
                         value: statusPlacaSolar,
                         label: 'Status da\nPlaca Solar',
-                        // Chama a função passando a string atual
                         valueColor: _getCorPlacaSolar(statusPlacaSolar),
                       ),
                     ),
@@ -165,7 +162,6 @@ class _MonitorScreenState extends State<MonitorScreen> {
   }
 
 
-// Substitua o _buildPlantCard atual por este:
   Widget _buildPlantCard(String nomePlanta, double umidade) {
     final Color corAtiva = _getCorUmidade(umidade);
 

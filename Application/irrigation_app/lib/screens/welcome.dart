@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
-import 'main_screen.dart'; // Mantivemos apenas a MainScreen, pois ela gerencia as outras
+import 'main_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  // Função que executa a transição definitiva para o Painel Principal com as abas
   void _entrarNoApp(BuildContext context) {
     Navigator.pushReplacement(
       context,
@@ -42,7 +41,6 @@ class WelcomeScreen extends StatelessWidget {
 
                 const Spacer(flex: 2),
 
-                // Botão de Entrada no App
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -52,7 +50,7 @@ class WelcomeScreen extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: globals.white_background_terciary,
-                      foregroundColor: globals.white_background_secondary, // Ajustado para contraste ideal
+                      foregroundColor: globals.white_background_secondary, 
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),

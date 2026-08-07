@@ -16,13 +16,12 @@ class EveApp extends StatelessWidget {
 
 @override
   Widget build(BuildContext context) {
-    // 2. Envolvemos o MaterialApp com o ValueListenableBuilder
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (_, ThemeMode currentMode, __) {
         return MaterialApp(
           title: 'E.V.E.',
-          themeMode: currentMode, // Escuta a variável global
+          themeMode: currentMode,
           
           theme: ThemeData(
             brightness: Brightness.light,
@@ -62,7 +61,7 @@ class EveApp extends StatelessWidget {
             ),
           ),
           
-          home: const WelcomeScreen(), // Sua tela inicial
+          home: const WelcomeScreen(),
         );
       },
     );
