@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
-import 'main_screen.dart';
+import 'wifi_setup_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -10,7 +10,7 @@ class WelcomeScreen extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => const MainScreen(),
+        builder: (context) => const WifiSetupScreen(),
       ),
     );
   }
@@ -57,7 +57,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'Entrar',
+                      'Configurar Estação',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

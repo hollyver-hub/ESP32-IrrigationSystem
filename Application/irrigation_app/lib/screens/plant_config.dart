@@ -41,7 +41,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
         backgroundColor: Theme.of(context).cardColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).textTheme.bodyLarge?.color, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
