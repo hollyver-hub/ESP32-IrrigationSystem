@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
+import 'package:irrigation_app/services/mqtt_service.dart';
 
 class PlantConfigScreen extends StatefulWidget {
   final String nomeAtual;
@@ -18,17 +19,25 @@ class PlantConfigScreen extends StatefulWidget {
 class _PlantConfigScreenState extends State<PlantConfigScreen> {
   late TextEditingController _nomeController;
   late double _nivelUmidade;
+  final MqttService _mqttService = MqttService(); // Correção: Instância movida para o State
 
   @override
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.nomeAtual);
     _nivelUmidade = widget.umidadeAlvoAtual;
+
+    _conectarMQTT();
+  }
+
+  Future<void> _conectarMQTT() async {
+    await _mqttService.connect();
   }
 
   @override
   void dispose() {
     _nomeController.dispose();
+    // Você também pode adicionar um _mqttService.client.disconnect() aqui se quiser fechar a conexão ao sair da tela
     super.dispose();
   }
 
@@ -217,8 +226,26 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                 alignment: Alignment.bottomRight,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Aqui você integrará futuramente o envio do novo limite
-                    // para o ESP32 via HTTP/MQTT e a atualização do estado global.
+                    // Converte o _nivelUmidade (que vai de 0.0 a 1.0 no seu Slider) para 0 a 100
+                    int limiteEmPorcentagem = (_nivelUmidade * 100).toInt();
+
+                    // Identifica qual zona estamos configurando baseado no nome atual passado para a tela
+                    String topicoZona = "eve/estacao/config/z1"; 
+                    if (widget.nomeAtual.contains("2")) topicoZona = "eve/estacao/config/z2";
+                    if (widget.nomeAtual.contains("3")) topicoZona = "eve/estacao/config/z3";
+                    if (widget.nomeAtual.contains("4")) topicoZona = "eve/estacao/config/z4";
+
+                    // Chama a função do nosso serviço para enviar a mensagem retida para o HiveMQ
+                    _mqttService.publicarLimite(topicoZona, limiteEmPorcentagem);
+                    
+                    // Exibe um feedback visual
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Nova umidade mínima de $limiteEmPorcentagem% salva!'),
+                        backgroundColor: globals.green_primary,
+                      ),
+                    );
+
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
