@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
+import 'package:irrigation_app/services/mqtt_service.dart';
 import 'plant_config.dart';
 
 class MonitorScreen extends StatefulWidget {
@@ -11,30 +13,90 @@ class MonitorScreen extends StatefulWidget {
 }
 
 class _MonitorScreenState extends State<MonitorScreen> {
-  String statusSistema = 'Suspenso'; // Pode ser 'Ativo', 'Suspenso' ou 'Offline'
-  int nivelBateria = 73;
-  String statusPlacaSolar = 'Carregando'; // Pode ser 'Carregando', 'Inativo' ou 'N/A'
+  final MqttService _mqttService = MqttService();
 
-  double umidadePlantaX = 0.75; // 75%
-  double umidadePlantaY = 0.10; // 10%
-  double umidadePlantaZ = 0.30; // 30%
-  double umidadePlantaW = 0.50; // 50%
+  // Status da Rede e Energia
+  bool _conectado = false;
+  int _nivelBateria = 0;
+  bool _carregandoSolar = false;
 
+  // Umidade Atual (Recebida via MQTT: 0 a 100)
+  int _umidadeZ1 = 0;
+  int _umidadeZ2 = 0;
+  int _umidadeZ3 = 0;
+  int _umidadeZ4 = 0;
 
-  Color _getCorUmidade(double porcentagem) {
-    if (porcentagem < 0.20) {
-      return globals.red_graphic;
-    } else if (porcentagem < 0.50) {
-      return globals.yellow_graphic;
-    } else {
-      return globals.green_primary;
+  // Nomes Personalizados (Lidos do SharedPreferences)
+  String _nomeZ1 = 'Zona 1';
+  String _nomeZ2 = 'Zona 2';
+  String _nomeZ3 = 'Zona 3';
+  String _nomeZ4 = 'Zona 4';
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarNomes();
+    _iniciarMQTT();
+  }
+
+  // 1. Carrega os nomes salvos no celular usando chaves padronizadas (1 a 4)
+  Future<void> _carregarNomes() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _nomeZ1 = prefs.getString('nome_zona_1') ?? 'Planta X';
+        _nomeZ2 = prefs.getString('nome_zona_2') ?? 'Planta Y';
+        _nomeZ3 = prefs.getString('nome_zona_3') ?? 'Planta Z';
+        _nomeZ4 = prefs.getString('nome_zona_4') ?? 'Planta W';
+      });
     }
   }
 
-  Color _getCorStatusSistema(String status) {
-    if (status == 'Offline') return globals.red_graphic;
-    if (status == 'Suspenso') return globals.yellow_graphic;
-    return globals.green_primary; 
+  // Função dedicada para processar os dados recebidos em tempo real via lista de ouvintes
+  void _aoReceberDadosMQTT(Map<String, dynamic> dados) {
+    if (mounted) {
+      setState(() {
+        _umidadeZ1 = (dados["zona1"]?["umidade"] ?? 0).toInt();
+        _umidadeZ2 = (dados["zona2"]?["umidade"] ?? 0).toInt();
+        _umidadeZ3 = (dados["zona3"]?["umidade"] ?? 0).toInt();
+        _umidadeZ4 = (dados["zona4"]?["umidade"] ?? 0).toInt();
+        
+        _nivelBateria = (dados["bateria_perc"] ?? 0).toInt();
+        
+        var carregandoVal = dados["carregando"];
+        if (carregandoVal is bool) {
+          _carregandoSolar = carregandoVal;
+        } else {
+          _carregandoSolar = (carregandoVal == 1 || carregandoVal.toString().toLowerCase() == 'true');
+        }
+      });
+    }
+  }
+
+  // 2. Inicia a escuta adicionando o ouvinte sem conflitar com outras telas
+  Future<void> _iniciarMQTT() async {
+    _mqttService.adicionarOuvinte(_aoReceberDadosMQTT);
+
+    bool conectou = await _mqttService.connect();
+    if (mounted) setState(() => _conectado = conectou);
+  }
+
+  @override
+  void dispose() {
+    // Remove o ouvinte ao sair da tela para evitar vazamentos de memória
+    _mqttService.removerOuvinte(_aoReceberDadosMQTT);
+    super.dispose();
+  }
+
+  // Lógica de Cores
+  Color _getCorUmidade(double porcentagem) {
+    if (porcentagem < 0.30) return globals.red_graphic;
+    if (porcentagem < 0.50) return globals.yellow_graphic;
+    return globals.green_primary;
+  }
+
+  Color _getCorStatusSistema(bool conectado) {
+    return conectado ? globals.green_primary : globals.red_graphic; 
   }
 
   Color _getCorBateria(int nivel) {
@@ -43,14 +105,15 @@ class _MonitorScreenState extends State<MonitorScreen> {
     return globals.green_primary;
   }
 
-  Color _getCorPlacaSolar(String status) {
-    if (status == 'N/A') return globals.red_graphic;
-    if (status == 'Inativo') return globals.yellow_graphic;
-    return globals.green_primary;
+  Color _getCorPlacaSolar(bool carregando) {
+    return carregando ? globals.green_primary : globals.yellow_graphic;
   }
 
   @override
   Widget build(BuildContext context) {
+    String statusSistema = _conectado ? 'Ativo' : 'Offline';
+    String statusPlacaSolar = _carregandoSolar ? 'Carregando' : 'Inativo';
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
@@ -59,7 +122,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
         elevation: 0,
         centerTitle: false,
         title: Padding(
-          padding: EdgeInsets.only(left: 8.0),
+          padding: const EdgeInsets.only(left: 8.0),
           child: Text(
             'Monitor',
             style: TextStyle(
@@ -79,6 +142,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
             children: [
               const SizedBox(height: 20),
 
+              // PAINEL DE TELEMETRIA SUPERIOR
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                 decoration: BoxDecoration(
@@ -98,27 +162,23 @@ class _MonitorScreenState extends State<MonitorScreen> {
                       child: _buildTelemetryColumn(
                         value: statusSistema,
                         label: 'Status do\nSistema',
-                        valueColor: _getCorStatusSistema(statusSistema), 
+                        valueColor: _getCorStatusSistema(_conectado), 
                       ),
                     ),
-
                     _buildVerticalDivider(),
-
                     Expanded(
                       child: _buildTelemetryColumn(
-                        value: '$nivelBateria%',
+                        value: '$_nivelBateria%',
                         label: 'Nível da\nBateria',
-                        valueColor: _getCorBateria(nivelBateria),
+                        valueColor: _getCorBateria(_nivelBateria),
                       ),
                     ),
-
                     _buildVerticalDivider(),
-
                     Expanded(
                       child: _buildTelemetryColumn(
                         value: statusPlacaSolar,
                         label: 'Status da\nPlaca Solar',
-                        valueColor: _getCorPlacaSolar(statusPlacaSolar),
+                        valueColor: _getCorPlacaSolar(_carregandoSolar),
                       ),
                     ),
                   ],
@@ -138,6 +198,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
 
               const SizedBox(height: 16),
 
+              // GRIDS COM OS SENSORES
               Expanded(
                 child: GridView.count(
                   crossAxisCount: 2,
@@ -145,14 +206,13 @@ class _MonitorScreenState extends State<MonitorScreen> {
                   mainAxisSpacing: 16,
                   childAspectRatio: 0.88,
                   children: [
-                    _buildPlantCard('Planta X', umidadePlantaX),
-                    _buildPlantCard('Planta Y', umidadePlantaY),
-                    _buildPlantCard('Planta Z', umidadePlantaZ),
-                    _buildPlantCard('Planta W', umidadePlantaW),
+                    _buildPlantCard(1, _nomeZ1, _umidadeZ1),
+                    _buildPlantCard(2, _nomeZ2, _umidadeZ2),
+                    _buildPlantCard(3, _nomeZ3, _umidadeZ3),
+                    _buildPlantCard(4, _nomeZ4, _umidadeZ4),
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
             ],
           ),
@@ -161,21 +221,26 @@ class _MonitorScreenState extends State<MonitorScreen> {
     );
   }
 
-
-  Widget _buildPlantCard(String nomePlanta, double umidade) {
-    final Color corAtiva = _getCorUmidade(umidade);
+  Widget _buildPlantCard(int zonaId, String nomePlanta, int umidadeInt) {
+    double umidadeDecimal = (umidadeInt / 100.0).clamp(0.0, 1.0); 
+    final Color corAtiva = _getCorUmidade(umidadeDecimal);
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // Aguarda o retorno da tela de configuração passando o ID correto da zona
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PlantConfigScreen(
+              zonaId: zonaId,
               nomeAtual: nomePlanta,
-              umidadeAlvoAtual: umidade,
+              umidadeAlvoAtual: 0.3,
             ),
           ),
         );
+        
+        // Atualiza os nomes imediatamente ao retornar
+        _carregarNomes();
       },
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -195,8 +260,10 @@ class _MonitorScreenState extends State<MonitorScreen> {
           children: [
             Text(
               nomePlanta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w400,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
@@ -205,9 +272,8 @@ class _MonitorScreenState extends State<MonitorScreen> {
             CircularPercentIndicator(
               radius: 54.0,
               lineWidth: 10.0,
-              animation: true,
-              animationDuration: 1000,
-              percent: umidade,
+              animation: false,
+              percent: umidadeDecimal,
               circularStrokeCap: CircularStrokeCap.round,
               progressColor: corAtiva,
               backgroundColor: corAtiva.withOpacity(0.20),
@@ -215,7 +281,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    '${(umidade * 100).toInt()}%',
+                    '$umidadeInt%',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -242,6 +308,7 @@ class _MonitorScreenState extends State<MonitorScreen> {
       ),
     );
   }
+
   Widget _buildTelemetryColumn({
     required String value,
     required String label,

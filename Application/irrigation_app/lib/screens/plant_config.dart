@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:irrigation_app/constants/globals.dart' as globals;
 import 'package:irrigation_app/services/mqtt_service.dart';
 
 class PlantConfigScreen extends StatefulWidget {
+  final int zonaId; 
   final String nomeAtual;
   final double umidadeAlvoAtual;
 
   const PlantConfigScreen({
     super.key,
+    required this.zonaId,
     required this.nomeAtual,
     required this.umidadeAlvoAtual,
   });
@@ -19,7 +22,7 @@ class PlantConfigScreen extends StatefulWidget {
 class _PlantConfigScreenState extends State<PlantConfigScreen> {
   late TextEditingController _nomeController;
   late double _nivelUmidade;
-  final MqttService _mqttService = MqttService(); // Correção: Instância movida para o State
+  final MqttService _mqttService = MqttService();
 
   @override
   void initState() {
@@ -34,10 +37,16 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
     await _mqttService.connect();
   }
 
+  // Função para salvar o nome no celular
+  Future<void> _salvarNomeLocalmente(String novoNome) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Salva com uma chave única, ex: "nome_zona_1"
+    await prefs.setString('nome_zona_${widget.zonaId}', novoNome);
+  }
+
   @override
   void dispose() {
     _nomeController.dispose();
-    // Você também pode adicionar um _mqttService.client.disconnect() aqui se quiser fechar a conexão ao sair da tela
     super.dispose();
   }
 
@@ -70,7 +79,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                   ),
                 ),
                 Text(
-                  'Sensor ${(widget.nomeAtual.split(' ').last)}', 
+                  'Bomba/Sensor ${widget.zonaId}', // Mostra a zona real independente do nome
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyMedium?.color,
                     fontSize: 12,
@@ -132,7 +141,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
               const SizedBox(height: 48),
 
               Text(
-                'Nome',
+                'Nome da Planta',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -144,7 +153,7 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                 controller: _nomeController,
                 maxLines: 1, 
                 decoration: InputDecoration(
-                  hintText: 'Insira aqui o novo nome para sua planta',
+                  hintText: 'Ex: Samambaia da Sala',
                   hintStyle: TextStyle(color: Colors.grey.shade500),
                   filled: true,
                   fillColor: Theme.of(context).cardColor,
@@ -218,35 +227,34 @@ class _PlantConfigScreenState extends State<PlantConfigScreen> {
                 ),
               ),
 
-              const SizedBox(height: 64),
-
-              const SizedBox(height: 150),
+              const SizedBox(height: 80),
 
               Align(
                 alignment: Alignment.bottomRight,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Converte o _nivelUmidade (que vai de 0.0 a 1.0 no seu Slider) para 0 a 100
+                  onPressed: () async {
+                    // 1. Coleta os novos valores
                     int limiteEmPorcentagem = (_nivelUmidade * 100).toInt();
+                    String novoNome = _nomeController.text.trim();
+                    if (novoNome.isEmpty) novoNome = widget.nomeAtual; // Previne nomes vazios
 
-                    // Identifica qual zona estamos configurando baseado no nome atual passado para a tela
-                    String topicoZona = "eve/estacao/config/z1"; 
-                    if (widget.nomeAtual.contains("2")) topicoZona = "eve/estacao/config/z2";
-                    if (widget.nomeAtual.contains("3")) topicoZona = "eve/estacao/config/z3";
-                    if (widget.nomeAtual.contains("4")) topicoZona = "eve/estacao/config/z4";
+                    // 2. Salva o nome na memória do celular
+                    await _salvarNomeLocalmente(novoNome);
 
-                    // Chama a função do nosso serviço para enviar a mensagem retida para o HiveMQ
+                    // 3. Usa o zonaId exato para mandar pro tópico MQTT correto
+                    String topicoZona = "eve/estacao/config/z${widget.zonaId}";
                     _mqttService.publicarLimite(topicoZona, limiteEmPorcentagem);
                     
-                    // Exibe um feedback visual
+                    // 4. Feedback
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Nova umidade mínima de $limiteEmPorcentagem% salva!'),
+                        content: Text('Configurações de $novoNome salvas!'),
                         backgroundColor: globals.green_primary,
                       ),
                     );
 
-                    Navigator.pop(context);
+                    // 5. Retorna para a tela anterior já avisando que o nome mudou
+                    Navigator.pop(context, novoNome);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF333333), 
